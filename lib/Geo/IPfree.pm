@@ -9,16 +9,24 @@
 ## Licence:     This program is free software; you can redistribute it and/or
 ##              modify it under the same terms as Perl itself
 #############################################################################
+#
+# Laurent Destailleur improvements:
+# - Changed "sysread" to "read".
+#  for cleaner code, better compatibility and to fix bug of using not always working 'tell' with 'sysread'.
+# - Added $this->{searchorder}, for speed improvment, avoiding sort for each lookup.
+# - Trap errors on open().
+#
 
 package Geo::IPfree;
 use 5.006;
+use Memoize;
 use Carp qw() ;
 use strict qw(vars) ;
 
 require Exporter;
 our @ISA = qw(Exporter);
 
-our $VERSION = '0.01';
+our $VERSION = '0.2';
 
 our @EXPORT = qw(LookUp LoadDB) ;
 our @EXPORT_OK = @EXPORT ;
@@ -52,7 +60,21 @@ UG Uganda UM United_States_Minor_Outlying_Islands US United_States UY Uruguay UZ
 VG Virgin_Islands,_British VI Virgin_Islands,_U.S. VN Vietnam VU Vanuatu WF Wallis_and_Futuna WS Samoa YE Yemen YT Mayotte YU Yugoslavia ZA South_Africa ZM Zambia ZR Zaire ZW Zimbabwe
 ) ;
 
-my (%baseX,$THIS) ;
+my (%baseX,$base,$THIS) ;
+
+my $cache_expire = 1000 ;
+
+####################
+# DECLARE BASE LIB #
+####################
+
+{
+  my $c = 0 ;
+  %baseX = map { $_ => ($c++) } @baseX ;
+  $base = @baseX ;
+  
+  foreach my $Key ( keys %countrys ) { $countrys{$Key} =~ s/_/ /gs ;}
+}
 
 #######
 # NEW #
@@ -71,7 +93,11 @@ sub new {
 
   if (!defined $db_file) { $db_file = &find_db_file ;}
   
+  $this->{dbfile} = $db_file ;
+  
   $this->LoadDB($db_file) ;
+  
+  $this->{cache} = 1 ;
 
   return( $this ) ;
 }
@@ -86,30 +112,31 @@ sub LoadDB {
 
   if (-d $db_file) { $db_file .= "/$def_db" ;}
 
-  if (!-s $db_file) { Carp::croak("Can't load database: $db_file") ;}
+  if (!-s $db_file) { Carp::croak("Can't load database, blank or not there: $db_file") ;}
 
   $this->{db} = $db_file ;
 
   my ($handler,$buffer) ;
-  open($handler,$db_file) ;
+  open($handler,$db_file) || Carp::croak("Failed to open database file $db_file for read!") ;
+  binmode($handler) ;
   
   if ( $this->{pos} ) { delete($this->{pos}) ;}
   
-  while( sysread($handler, $buffer , 1 , length($buffer) ) ) {
-
+  while( read($handler, $buffer , 1 , length($buffer) ) ) {
     if ($buffer =~ /##headers##(\d+)##$/s  ) {
       my $headers ;
-      sysread($handler, $headers , $1 ) ;
+      read($handler, $headers , $1 ) ;
       my (%head) = ( $headers =~ /(\d+)=(\d+)/gs );
       foreach my $Key ( keys %head ) { $this->{pos}{$Key} = $head{$Key} ;}
       $buffer = '' ;
     }
     elsif ($buffer =~ /##start##$/s  ) {
-      my $pos = tell($handler) ;
-      $this->{start} = $pos ;
+      $this->{start} = tell($handler) ;
       last ;
     }
   }
+    
+  @{$this->{searchorder}} = ( sort {$a <=> $b} keys %{$this->{pos}} ) ;
   
   $this->{handler} = $handler ;
 }
@@ -122,11 +149,8 @@ sub LookUp {
   my $this ;
   
   if ($#_ == 0) {
-    if ($THIS) { $this = $THIS ;}
-    else {
-      $this = Geo::IPfree->new() ;
-      $THIS = $this ;
-    }
+    if (!$THIS) { $THIS = Geo::IPfree->new() ;}
+    $this = $THIS ;
   }
   else { $this = shift ;}
 
@@ -137,31 +161,81 @@ sub LookUp {
   $ip =~ s/\.$// ;
   
   if ($ip !~ /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/) { $ip = nslookup($ip) ;}
+
+  ## Since the last class is always from the same country, will try 0 and cache 0:
+  my $ip_class = $ip ;
+  $ip_class =~ s/\.\d+$/\.0/ ;
+
+  if ( $this->{cache} && $this->{CACHE}{$ip_class} ) { return( @{$this->{CACHE}{$ip_class}} , $ip_class ) ;}
   
-  my $ipnb = ip2nb($ip) ;
+  my $ipnb = ip2nb($ip_class) ;
   
   my $buf_pos = 0 ;
-  
-  foreach my $Key ( sort {$a <=> $b} keys %{$this->{pos}} ) {
-    if ($this->{pos}{$Key} && $ipnb <= $Key) { $buf_pos = $this->{pos}{$Key} ; last ;}
+
+  foreach my $Key ( @{$this->{searchorder}} ) {
+    if ($ipnb <= $Key) { $buf_pos = $this->{pos}{$Key} ; last ;}
   }
   
-  seek($this->{handler} , $buf_pos + $this->{start} , 0) ;
+  my ($buffer,$country,$iprange) ;
   
-  my (@ret,$buffer) ;
-  
-  while( sysread($this->{handler} , $buffer , 7) ) {
-    my $country = substr($buffer , 0 , 2) ;
-    my $iprange = baseX2dec( substr($buffer , 2) ) ;
-    if ($ipnb >= $iprange) {
-      @ret = ($country,$countrys{"\U$country\E"}) ;
-      $ret[1] =~ s/_/ /gs ;
-      last ;
+  ## Will use the DB in the memory:
+  if ( $this->{FASTER} ) {
+    while($buf_pos < $this->{DB_SIZE}) {
+      $buffer = substr($this->{DB} , $buf_pos , 7) ;
+      $country = substr($buffer , 0 , 2) ;
+      $iprange = baseX2dec( substr($buffer , 2 , 5) ) ;
+      $buf_pos += 7 ;
+      if ($ipnb >= $iprange) { last ;}
     }
   }
+  ## Will read the DB in the disk:
+  else {
+    seek($this->{handler} , 0 , 0) if $] < 5.006001 ; ## Fix bug on Perl 5.6.0
+    seek($this->{handler} , $buf_pos + $this->{start} , 0) ;
+    while( read($this->{handler} , $buffer , 7) ) {
+      $country = substr($buffer , 0 , 2) ;
+      $iprange = baseX2dec( substr($buffer , 2) ) ;
+      if ($ipnb >= $iprange) { last ;}
+    }
+  }
+  
+  if ( $this->{cache} ) {
+    $this->{CACHE}{$ip_class} = [$country , $countrys{$country}] ;
+    $this->{CACHE}{x}++ ;
+    if ( $this->{CACHE}{x} > $cache_expire ) { $this->Clean_Cache ;}
+  }
 
-  return( @ret , $ip ) ;
+  return( $country , $countrys{$country} , $ip_class ) ;
 }
+
+##########
+# FASTER #
+##########
+
+sub Faster {
+  my $this = shift ;
+  
+  seek($this->{handler} , 0 , 0) ; ## Fix bug on Perl 5.6.0
+  seek($this->{handler} , $this->{start} , 0) ;
+  1 while( read($this->{handler}, $this->{DB} , 1024*4 , length($this->{DB}) ) ) ;
+  
+  $this->{DB_SIZE} = length($this->{DB}) ;
+
+  memoize('dec2baseX') ;
+  memoize('baseX2dec') ;
+
+  ## Too many memory and not soo fast:
+  #memoize('ip2nb') ;
+  #memoize('nb2ip') ;
+  
+  $this->{FASTER} = 1 ;
+}
+
+###############
+# CLEAN_CACHE #
+###############
+
+sub Clean_Cache { delete $_[0]->{CACHE} ; 1 ;}
 
 ############
 # NSLOOKUP #
@@ -213,7 +287,8 @@ sub find_db_file {
 
 sub ip2nb {
   my @ip = split(/\./ , $_[0]) ;
-  return( 16777216* $ip[0] + 65536* $ip[1] + 256* $ip[2] + $ip[3] ) ;
+  #return( 16777216* $ip[0] + 65536* $ip[1] + 256* $ip[2] + $ip[3] ) ;
+  return( ($ip[0]<<24) + ($ip[1]<<16) + ($ip[2]<<8) + $ip[3] ) ;
 }
 
 #########
@@ -230,10 +305,8 @@ sub nb2ip {
   while($x > 1) {
     my $c = $x / 256 ;
     my $ci = int($x / 256) ;
-
-    my $r = $x - ($ci*256) ;
-    push(@ip , $r) ;
-
+    #push(@ip , $x - ($ci*256)) ;
+    push(@ip , $x - ($ci<<8)) ;
     $x = $ci ;
   }
   
@@ -254,17 +327,12 @@ sub dec2baseX {
   my ( $dec ) = @_ ;
   
   my @base ;
-  my $base = @baseX ;
-  
   my $x = $dec ;
   
   while($x > 1) {
     my $c = $x / $base ;
     my $ci = int($x / $base) ;
-
-    my $r = $x - ($ci*$base) ;
-    push(@base , $r) ;
-
+    push(@base , $x - ($ci*$base) ) ;
     $x = $ci ;
   }
   
@@ -288,23 +356,15 @@ sub dec2baseX {
 sub baseX2dec {
   my ( $baseX ) = @_ ;
   
-  if (! %baseX ) {
-    my $c = 0 ;
-    %baseX = map { $_ => ($c++) } @baseX ;
-  }
-  
-  my $base = @baseX ;
   my @base = split("" , $baseX) ;
   my $dec ;
-  
+
   my $i = -1 ;
   foreach my $base_i ( reverse @base ) {
     $i++ ;
-    my $n = $baseX{$base_i} ;
-    
-    $dec += $n * ($base**$i) ;
+    $dec += $baseX{$base_i} * ($base**$i) ;
   }
-  
+
   return( $dec ) ;
 }
 
@@ -318,7 +378,7 @@ __END__
 
 =head1 NAME
 
-Geo::IPfree - Look up country of IP Address. This module make this off-line and the DB of IPs is free.
+Geo::IPfree - Look up country of IP Address. This module make this off-line and the DB of IPs is free & small.
 
 =head1 SYNOPSIS
 
@@ -334,6 +394,7 @@ Geo::IPfree - Look up country of IP Address. This module make this off-line and 
 
   use Geo::IPfree;
   my $GeoIP = Geo::IPfree->new('/GeoIPfree/ipscountry.dat') ;
+  $GeoIP->Faster ; ## Enable the faster option.
   my ($country,$country_name,$ip) = $GeoIP->LookUp("www.cnn.com") ; ## Getting by Hostname.
   
   $GeoIP->LoadDB('/GeoIPfree/ips.dat') ;
@@ -351,7 +412,8 @@ Geo::IPfree - Look up country of IP Address. This module make this off-line and 
   This package comes with it's own database to look up the IP's country, and is totally free.
   
   Take a look in CPAN for updates...
-  
+
+
 =head1 METHODS
 
 =over 4
@@ -366,6 +428,17 @@ Returns the ISO 3166 country (XX) code for an IP address or Hostname.
 
 **If you send a Hostname you will need to be connected to the internet to resolve the host IP.
 
+=item Clean_Cache
+
+Clean the memory used by the cache.
+
+=item Faster
+
+Make the LookUp() faster, good for big amount of LookUp()s. This will load all the DB in the memory (200Kb) and read from there,
+not from HD (good way for slow HD or network disks), but use more memory. The module "Memoize" will be enabled for some internal functions too.
+
+Note that if you make a big amount of querys to LookUp(), in the end the amount of memory can be big, than is better to use more memory from the begin and make all faster.
+
 =back
 
 =head1 VARS
@@ -376,15 +449,64 @@ Returns the ISO 3166 country (XX) code for an IP address or Hostname.
 
 The database file in use.
 
-=item $this->{handler}
+=item $GeoIP->{handler}
 
 The database file handler.
 
+=item $GeoIP->{dbfile}
+
+The database file path.
+
+=item $GeoIP->{cache} BOOLEAN
+
+Set/tell if the cache of LookUp() is on. If it's on it will cache the last 1000 querys. Default: 1
+
+The cache is good when you are parsing a list of IPs, generally a web log.
+If in the log you have many lines with the same IP, GEO::IPfree don't need to make a full search for each query,
+it will cache the last 1000 different IPs. After each 1000 IPs the cache is cleaned to restart it.
+
+Note that the Lookup make the query without the last IP number (xxx.xxx.xxx.0),
+then the cache for the IP 192.168.0.1 will be the same for 192.168.0.2 (they are the same query, 192.168.0.0).
+
 =back
+
+=head1 DB FORMAT
+
+the DB has a list of IP ranges & countrys, for example, from 200.128.0.0 to
+200.103.255.255 the IPs are from BR. To make a fast access to the DB the format
+try to use less bytes per input (block). The file was in ASCII and in blocks
+of 7 bytes: XXnnnnn
+
+  XX    -> the country code (BR,US...)
+  nnnnn -> the IP range using a base of 85 digits
+           (not in dec or hex to get space).
+
+See CPAN for updates of the DB...
+
+=head1 NOTES
+
+The file ipscountry.dat is made only for Geo::IPfree and has their own format.
+To convert it see the tool "ipct2txt.pl" in the same path of Geo/IPfree.pm.
+
+=head1 CHAGES
+
+0.2 - Sat Mar 22 18:10 2003
+
+   - Change sysread() to read() for better portability.
+   - Speed improvement for multiples LookUp().
+     4 times faster!
+
+0.01.1 - Nov 6 14:05:03 2002 (not released on CPAN)
+
+   - Fix seek bug for Perl 5.6.0 on multiples LookUp().
+
 
 =head1 AUTHOR
 
-Graciliano M. P. <gm@virtuasites.com.br>
+Graciliano M. P. <gm@virtuasites.com.br>.
+
+Thanks to Laurent Destailleur (author of AWStats) that tested it on many OS and
+fixed bugs for them, like the not portable sysread, and asked for some speed improvement.
 
 =head1 COPYRIGHT
 

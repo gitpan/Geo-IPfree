@@ -1,5 +1,5 @@
-Geo/IPfree version 0.01
-=======================
+Geo/IPfree version 0.2
+======================
 
 Look up country of IP Address. This module make this off-line and the database of IPs is free.
 
@@ -16,7 +16,7 @@ To install this module type the following:
 
 DEPENDENCIES
 
-Perl! :-P
+Perl! ;-P
 
 COPYRIGHT AND LICENCE
 

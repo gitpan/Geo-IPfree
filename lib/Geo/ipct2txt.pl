@@ -9,11 +9,11 @@
   
   my @baseX = qw(0 1 2 3 4 5 6 7 8 9 A B C D E F G H I J K L M N O P Q R S T U V W X Y Z a b c d e f g h i j k l m n o p q r s t u v w x y z . , ; ' " ` < > { } [ ] = + - ~ * @ # % $ & ! ?) ;
   
-  if ( $ARGV[0] =~ /^-+h/i || $#ARGV < 1) {
+  if ( $ARGV[0] =~ /^-+h/i || $#ARGV < 1 ) {
 print qq`
 ________________________________________________________
 
-This tool will convert a GeoIPfree dat file to ASCII.
+This tool will convert a Geo::IPfree dat file to ASCII.
 
   USE: perl $0 ./ipscountry.dat ./ips-ascii.txt
 
@@ -63,7 +63,7 @@ exit ;
     my $ip = @IPS[$i+1] ;
     my $ipprev = @IPS[$i-1] ;
     
-    if ($ip ne '1.0.0.0.0') {
+    if ($ip ne '1.0.0.0.0' && $ct =~ /[\w-]{2}/) {
       push(@OUT , "$ct: $ip $ipprev") ;    
     }
 
