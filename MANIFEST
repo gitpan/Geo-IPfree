@@ -1,0 +1,9 @@
+Changes
+Makefile.PL
+MANIFEST
+README
+test.pl
+lib/Geo/IPfree.pm
+lib/Geo/ipct2txt.pl
+lib/Geo/ipscountry.dat
+
