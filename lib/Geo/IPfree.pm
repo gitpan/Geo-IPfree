@@ -22,43 +22,44 @@ use 5.006;
 use Memoize;
 use Carp qw() ;
 use strict qw(vars) ;
+use warnings;
 
 require Exporter;
 our @ISA = qw(Exporter);
 
-our $VERSION = '0.2';
+our $VERSION = '0.3';
 
 our @EXPORT = qw(LookUp LoadDB) ;
 our @EXPORT_OK = @EXPORT ;
 
 my $def_db = 'ipscountry.dat' ;
 
-my @baseX = qw(0 1 2 3 4 5 6 7 8 9 A B C D E F G H I J K L M N O P Q R S T U V W X Y Z a b c d e f g h i j k l m n o p q r s t u v w x y z . , ; ' " ` < > { } [ ] = + - ~ * @ # % $ & ! ?) ;
+my @baseX = ( qw(0 1 2 3 4 5 6 7 8 9 A B C D E F G H I J K L M N O P Q R S T U V W X Y Z a b c d e f g h i j k l m n o p q r s t u v w x y z .), ',', qw(; ' " ` < > { } [ ] = + - ~ * @), '#', qw(% $ & ! ?) );
 
-my %countrys = qw(
+my %countrys = ( qw(
 -- N/A L0 localhost I0 IntraNet A1 Anonymous_Proxy A2 Satellite_Provider
 AD Andorra AE United_Arab_Emirates AF Afghanistan AG Antigua_and_Barbuda AI Anguilla AL Albania AM Armenia AN Netherlands_Antilles 
 AO Angola AP Asia/Pacific_Region AQ Antarctica AR Argentina AS American_Samoa AT Austria AU Australia AW Aruba AZ Azerbaijan BA Bosnia_and_Herzegovina BB Barbados BD Bangladesh 
 BE Belgium BF Burkina_Faso BG Bulgaria BH Bahrain BI Burundi BJ Benin BM Bermuda BN Brunei_Darussalam BO Bolivia BR Brazil BS Bahamas BT Bhutan BV Bouvet_Island BW Botswana 
-BY Belarus BZ Belize CA Canada CC Cocos_(Keeling)_Islands CD Congo,_The_Democratic_Republic_of_the CF Central_African_Republic CG Congo CH Switzerland CI Cote_D'Ivoire CK Cook_Islands 
+BY Belarus BZ Belize CA Canada CC Cocos_(Keeling)_Islands CD), 'Congo,_The_Democratic_Republic_of_the', qw(CF Central_African_Republic CG Congo CH Switzerland CI Cote_D'Ivoire CK Cook_Islands 
 CL Chile CM Cameroon CN China CO Colombia CR Costa_Rica CU Cuba CV Cape_Verde CX Christmas_Island CY Cyprus CZ Czech_Republic DE Germany DJ Djibouti DK Denmark DM Dominica 
 DO Dominican_Republic DZ Algeria EC Ecuador EE Estonia EG Egypt EH Western_Sahara ER Eritrea ES Spain ET Ethiopia EU Europe FI Finland FJ Fiji FK Falkland_Islands_(Malvinas) 
-FM Micronesia,_Federated_States_of FO Faroe_Islands FR France FX France,_Metropolitan GA Gabon GB United_Kingdom GD Grenada GE Georgia GF French_Guiana GH Ghana GI Gibraltar 
+FM), 'Micronesia,_Federated_States_of', qw(FO Faroe_Islands FR France FX), 'France,_Metropolitan', qw(GA Gabon GB United_Kingdom GD Grenada GE Georgia GF French_Guiana GH Ghana GI Gibraltar 
 GL Greenland GM Gambia GN Guinea GP Guadeloupe GQ Equatorial_Guinea GR Greece GS South_Georgia_and_the_South_Sandwich_Islands GT Guatemala GU Guam GW Guinea-Bissau GY Guyana 
 HK Hong_Kong HM Heard_Island_and_McDonald_Islands HN Honduras HR Croatia HT Haiti HU Hungary ID Indonesia IE Ireland IL Israel IN India IO British_Indian_Ocean_Territory 
-IQ Iraq IR Iran,_Islamic_Republic_of IS Iceland IT Italy JM Jamaica JO Jordan JP Japan KE Kenya KG Kyrgyzstan KH Cambodia KI Kiribati KM Comoros KN Saint_Kitts_and_Nevis 
-KP Korea,_Democratic_People's_Republic_of KR Korea,_Republic_of KW Kuwait KY Cayman_Islands KZ Kazakhstan LA Lao_People's_Democratic_Republic LB Lebanon LC Saint_Lucia LI Liechtenstein 
-LK Sri_Lanka LR Liberia LS Lesotho LT Lithuania LU Luxembourg LV Latvia LY Libyan_Arab_Jamahiriya MA Morocco MC Monaco MD Moldova,_Republic_of MG Madagascar MH Marshall_Islands 
-MK Macedonia,_the_Former_Yugoslav_Republic_of ML Mali MM Myanmar MN Mongolia MO Macau MP Northern_Mariana_Islands MQ Martinique MR Mauritania MS Montserrat MT Malta MU Mauritius 
+IQ Iraq IR), 'Iran,_Islamic_Republic_of', qw(IS Iceland IT Italy JM Jamaica JO Jordan JP Japan KE Kenya KG Kyrgyzstan KH Cambodia KI Kiribati KM Comoros KN Saint_Kitts_and_Nevis 
+KP), "Korea,_Democratic_People's_Republic_of", 'KR', 'Korea,_Republic_of', qw(KW Kuwait KY Cayman_Islands KZ Kazakhstan LA Lao_People's_Democratic_Republic LB Lebanon LC Saint_Lucia LI Liechtenstein 
+LK Sri_Lanka LR Liberia LS Lesotho LT Lithuania LU Luxembourg LV Latvia LY Libyan_Arab_Jamahiriya MA Morocco MC Monaco MD), 'Moldova,_Republic_of', qw(MG Madagascar MH Marshall_Islands 
+MK), 'Macedonia,_the_Former_Yugoslav_Republic_of', qw(ML Mali MM Myanmar MN Mongolia MO Macau MP Northern_Mariana_Islands MQ Martinique MR Mauritania MS Montserrat MT Malta MU Mauritius 
 MV Maldives MW Malawi MX Mexico MY Malaysia MZ Mozambique NA Namibia NC New_Caledonia NE Niger NF Norfolk_Island NG Nigeria NI Nicaragua NL Netherlands NO Norway NP Nepal 
 NR Nauru NU Niue NZ New_Zealand OM Oman PA Panama PE Peru PF French_Polynesia PG Papua_New_Guinea PH Philippines PK Pakistan PL Poland PM Saint_Pierre_and_Miquelon PN Pitcairn 
-PR Puerto_Rico PS Palestinian_Territory,_Occupied PT Portugal PW Palau PY Paraguay QA Qatar RE Reunion RO Romania RU Russian_Federation RW Rwanda SA Saudi_Arabia SB Solomon_Islands 
+PR Puerto_Rico PS), 'Palestinian_Territory,_Occupied', qw(PT Portugal PW Palau PY Paraguay QA Qatar RE Reunion RO Romania RU Russian_Federation RW Rwanda SA Saudi_Arabia SB Solomon_Islands 
 SC Seychelles SD Sudan SE Sweden SG Singapore SH Saint_Helena SI Slovenia SJ Svalbard_and_Jan_Mayen SK Slovakia SL Sierra_Leone SM San_Marino SN Senegal SO Somalia SR Suriname 
 ST Sao_Tome_and_Principe SV El_Salvador SY Syrian_Arab_Republic SZ Swaziland TC Turks_and_Caicos_Islands TD Chad TF French_Southern_Territories TG Togo TH Thailand TJ Tajikistan 
-TK Tokelau TM Turkmenistan TN Tunisia TO Tonga TP East_Timor TR Turkey TT Trinidad_and_Tobago TV Tuvalu TW Taiwan,_Province_of_China TZ Tanzania,_United_Republic_of UA Ukraine 
+TK Tokelau TM Turkmenistan TN Tunisia TO Tonga TP East_Timor TR Turkey TT Trinidad_and_Tobago TV Tuvalu TW), 'Taiwan,_Province_of_China', 'TZ', 'Tanzania,_United_Republic_of', qw(UA Ukraine 
 UG Uganda UM United_States_Minor_Outlying_Islands US United_States UY Uruguay UZ Uzbekistan VA Holy_See_(Vatican_City_State) VC Saint_Vincent_and_the_Grenadines VE Venezuela 
-VG Virgin_Islands,_British VI Virgin_Islands,_U.S. VN Vietnam VU Vanuatu WF Wallis_and_Futuna WS Samoa YE Yemen YT Mayotte YU Yugoslavia ZA South_Africa ZM Zambia ZR Zaire ZW Zimbabwe
-) ;
+VG), 'Virgin_Islands,_British', 'VI', 'Virgin_Islands,_U.S.', qw(VN Vietnam VU Vanuatu WF Wallis_and_Futuna WS Samoa YE Yemen YT Mayotte YU Yugoslavia ZA South_Africa ZM Zambia ZR Zaire ZW Zimbabwe
+) );
 
 my (%baseX,$base,$THIS) ;
 
@@ -117,6 +118,7 @@ sub LoadDB {
   $this->{db} = $db_file ;
 
   my ($handler,$buffer) ;
+  $buffer=0;
   open($handler,$db_file) || Carp::croak("Failed to open database file $db_file for read!") ;
   binmode($handler) ;
   
@@ -161,6 +163,8 @@ sub LookUp {
   $ip =~ s/\.$// ;
   
   if ($ip !~ /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/) { $ip = nslookup($ip) ;}
+
+  return unless length $ip;
 
   ## Since the last class is always from the same country, will try 0 and cache 0:
   my $ip_class = $ip ;
@@ -245,6 +249,7 @@ sub nslookup {
   my ( $host ) = @_ ;
   require Socket ;
   my $iaddr = Socket::inet_aton($host) ;
+  $iaddr = '' if !defined $iaddr;
   my @ip = unpack('C4',$iaddr) ;
   if (! @ip && ! $_[1]) { return( &nslookup("www.$host",1) ) ;}
   return( join (".",@ip) ) ;
@@ -255,29 +260,16 @@ sub nslookup {
 ################
 
 sub find_db_file {
-  my $lib_path ;
+  my @locations = ( qw(/usr/local/share /usr/local/share/GeoIPfree),
+    map { $_, "$_/Geo" } @INC );
 
-  foreach my $Key ( keys %INC ) {
-    if ($Key =~ /^IPfree.pm$/i) {
-      my ($lib) = ( $INC{$Key} =~ /^(.*?)[\\\/]+[^\\\/]+$/gs ) ;
-      if (-e "$lib/$def_db") { $lib_path = $lib ; last ;}
-    }
-  }
+  # lastly, find where this module was loaded, and try that dir
+  my ( $lib ) = ( $INC{'Geo/IPfree.pm'} =~ /^(.*?)[\\\/]+[^\\\/]+$/gs );
+  push @locations, $lib;
 
-  if ($lib_path eq '') {
-    foreach my $INC_i ( @INC ) {
-      my $lib = "$INC_i/Geo" ;
-      if (-e "$lib/$def_db") { $lib_path = $lib ; last ;}
-    }
+  for my $file ( map { "$_/$def_db" } @locations ) {
+    return $file if -e $file;
   }
-  
-  if ($lib_path eq '') {
-    foreach my $dir ( @INC , '/tmp' , '/usr/local/share' , '/usr/local/share/GeoIPfree' ) {
-      if (-e "$dir/$def_db") { $lib_path = $dir ; last ;}
-    }
-  }
-  
-  return( "$lib_path/$def_db" ) ;
 }
 
 
@@ -434,7 +426,7 @@ Clean the memory used by the cache.
 
 =item Faster
 
-Make the LookUp() faster, good for big amount of LookUp()s. This will load all the DB in the memory (200Kb) and read from there,
+Make the LookUp() faster, good for big amount of LookUp()s. This will load all the DB in the memory (639Kb) and read from there,
 not from HD (good way for slow HD or network disks), but use more memory. The module "Memoize" will be enabled for some internal functions too.
 
 Note that if you make a big amount of querys to LookUp(), in the end the amount of memory can be big, than is better to use more memory from the begin and make all faster.
@@ -486,20 +478,21 @@ See CPAN for updates of the DB...
 =head1 NOTES
 
 The file ipscountry.dat is made only for Geo::IPfree and has their own format.
-To convert it see the tool "ipct2txt.pl" in the same path of Geo/IPfree.pm.
+To convert it see the tool "ipct2txt.pl" in the C<misc> directoy.
 
-=head1 CHAGES
+The module looks for C<ipscountry.dat> in the following locations:
 
-0.2 - Sat Mar 22 18:10 2003
+=over 4
 
-   - Change sysread() to read() for better portability.
-   - Speed improvement for multiples LookUp().
-     4 times faster!
+=item * /usr/local/share
 
-0.01.1 - Nov 6 14:05:03 2002 (not released on CPAN)
+=item * /usr/local/share/GeoIPfree
 
-   - Fix seek bug for Perl 5.6.0 on multiples LookUp().
+=item * through @INC (as well as all @INC directories plus "/Geo")
 
+=item * from the same location that IPfree.pm was loaded
+
+=back
 
 =head1 AUTHOR
 
@@ -508,11 +501,9 @@ Graciliano M. P. <gm@virtuasites.com.br>.
 Thanks to Laurent Destailleur (author of AWStats) that tested it on many OS and
 fixed bugs for them, like the not portable sysread, and asked for some speed improvement.
 
-=head1 COPYRIGHT
+=head1 COPYRIGHT & LICENSE
 
 This program is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself.
 
 =cut
-
-

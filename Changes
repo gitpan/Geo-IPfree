@@ -1,16 +1,23 @@
 Revision history for Perl extension Geo::IPfree.
 
+0.3 Nov 19 2008
+    - Add webgeo2ipct script (RT #40938)
+    - Add new data file (RT #40938, #7663)
+    - Fix all warnings (RT #24333)
+    - Handle hosts that fail nslookup (RT #18434)
+    - find_db_file() now looks in user-overridable locations before looking
+      for the shipped version.
+    - /tmp removed from possible db locations.
+    - Dist cleanup.
+
 0.2 Sat Mar 22 18:10 2003
-   - Change sysread() to read() for better portability.
-   - Speed improvement for multiples LookUp().
-     4 times faster!
+    - Change sysread() to read() for better portability.
+    - Speed improvement for multiples LookUp().
+      4 times faster!
 
 0.01.1  Nov 6 14:05:03 2002
-   - Fix seek bug for Perl 5.6.0 on multiples LookUp().
+    - Fix seek bug for Perl 5.6.0 on multiples LookUp().
    
 0.01  Sun Oct 20 01:07:01 2002
-   - Released the 1st version!
-
-
-Enjoy! :-P
+    - Released the 1st version!
 
