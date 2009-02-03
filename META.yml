@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:                Geo-IPfree
-version:             0.4
+version:             0.5
 abstract:            Look up country of IP Address. This module make this off-line and the DB of IPs is free & small.
 license:             perl
 author:              
@@ -8,6 +8,7 @@ author:
 generated_by:        ExtUtils::MakeMaker version 6.42
 distribution_type:   module
 requires:     
+    Memoize:                       0
     Test::More:                    0.47
 meta-spec:
     url:     http://module-build.sourceforge.net/META-spec-v1.3.html
