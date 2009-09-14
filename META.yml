@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               Geo-IPfree
-version:            0.6
+version:            0.7
 abstract:           Look up country of IP Address. This module make this off-line and the DB of IPs is free & small.
 author:
     - Graciliano M. P. <gm@virtuasites.com.br>

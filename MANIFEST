@@ -1,5 +1,4 @@
 benchmark/benchmark.pl
-benchmark/benchmark2.pl
 Changes
 lib/Geo/IPfree.pm
 lib/Geo/ipscountry.dat
@@ -7,8 +6,9 @@ Makefile.PL
 MANIFEST			This list of files
 misc/ipct2txt.pl
 misc/txt2ipct.pl
-misc/webgeo2ipct.pl
 README
+t/basic-faster.t
+t/basic-obj.t
 t/basic.t
 t/use.t
 META.yml                                 Module meta-data (added by MakeMaker)

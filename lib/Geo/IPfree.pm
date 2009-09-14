@@ -9,7 +9,7 @@ use Carp qw();
 require Exporter;
 our @ISA = qw(Exporter);
 
-our $VERSION = '0.6';
+our $VERSION = '0.7';
 
 our @EXPORT    = qw(LookUp LoadDB);
 our @EXPORT_OK = @EXPORT;
@@ -106,8 +106,6 @@ sub LoadDB {
     if ( !-s $db_file ) {
         Carp::croak( "Can't load database, blank or not there: $db_file" );
     }
-
-    $this->{ db } = $db_file;
 
     my ( $handler, $buffer );
     $buffer = 0;
@@ -214,6 +212,9 @@ sub Faster {
 
     seek( $this->{ handler }, 0, 0 );                 ## Fix bug on Perl 5.6.0
     seek( $this->{ handler }, $this->{ start }, 0 );
+
+    $this->{ DB } = '';
+
     1 while (
         read(
             $this->{ handler },
