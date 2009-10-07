@@ -7,8 +7,12 @@ MANIFEST			This list of files
 misc/ipct2txt.pl
 misc/txt2ipct.pl
 README
+t/base.t
 t/basic-faster.t
 t/basic-obj.t
 t/basic.t
+t/ip-nb.t
+t/pod.t
+t/pod_coverage.t
 t/use.t
 META.yml                                 Module meta-data (added by MakeMaker)
