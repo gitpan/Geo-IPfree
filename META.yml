@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               Geo-IPfree
-version:            0.8
+version:            1.100470
 abstract:           Look up the country of an IPv4 address
 author:
     - Graciliano M. P. <gm@virtuasites.com.br>
@@ -17,7 +17,7 @@ no_index:
     directory:
         - t
         - inc
-generated_by:       ExtUtils::MakeMaker version 6.50
+generated_by:       ExtUtils::MakeMaker version 6.56
 meta-spec:
     url:      http://module-build.sourceforge.net/META-spec-v1.4.html
     version:  1.4
