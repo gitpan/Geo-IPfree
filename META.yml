@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               Geo-IPfree
-version:            1.110450
+version:            1.111650
 abstract:           Look up the country of an IPv4 address
 author:
     - Graciliano M. P. <gm@virtuasites.com.br>
