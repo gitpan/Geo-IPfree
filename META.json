@@ -4,7 +4,7 @@
       "Graciliano M. P. <gm@virtuasites.com.br>"
    ],
    "dynamic_config" : 1,
-   "generated_by" : "ExtUtils::MakeMaker version 6.59, CPAN::Meta::Converter version 2.112150",
+   "generated_by" : "ExtUtils::MakeMaker version 6.59, CPAN::Meta::Converter version 2.112621",
    "license" : [
       "perl_5"
    ],
@@ -38,5 +38,5 @@
       }
    },
    "release_status" : "stable",
-   "version" : "1.112490"
+   "version" : "1.112870"
 }
