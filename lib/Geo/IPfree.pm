@@ -9,7 +9,7 @@ use Carp qw();
 require Exporter;
 our @ISA = qw(Exporter);
 
-our $VERSION = '1.121660';
+our $VERSION = '1.122880';
 
 our @EXPORT    = qw(LookUp LoadDB);
 our @EXPORT_OK = @EXPORT;
@@ -296,6 +296,7 @@ BJ Benin
 BM Bermuda
 BN Brunei Darussalam
 BO Bolivia
+BQ Bonaire, Sint Eustatius and Saba
 BR Brazil
 BS Bahamas
 BT Bhutan
