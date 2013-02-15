@@ -20,4 +20,4 @@ no_index:
 requires:
   Memoize: 0
   Test::More: 0.47
-version: 1.130110
+version: 1.130450
