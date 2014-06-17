@@ -9,7 +9,7 @@ use Carp qw();
 require Exporter;
 our @ISA = qw(Exporter);
 
-our $VERSION = '1.140470';
+our $VERSION = '1.141670';
 
 our @EXPORT    = qw(LookUp LoadDB);
 our @EXPORT_OK = @EXPORT;
@@ -598,7 +598,7 @@ and getting an improvement for all calls.
 
 Attempts to resolve a hostname to an IP address. If it fails on the first pass
 it will attempt to resolve the same hostname with 'www.' prepended. C<$last_lookup>
-is used to supress this behavior.
+is used to suppress this behavior.
 
 =head2 ip2nb( $ip )
 

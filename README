@@ -63,7 +63,7 @@ METHODS
   nslookup( $host, [$last_lookup] )
     Attempts to resolve a hostname to an IP address. If it fails on the
     first pass it will attempt to resolve the same hostname with 'www.'
-    prepended. $last_lookup is used to supress this behavior.
+    prepended. $last_lookup is used to suppress this behavior.
 
   ip2nb( $ip )
     Encodes $ip into a numerical representation.
