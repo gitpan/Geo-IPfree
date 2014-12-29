@@ -2,10 +2,7 @@
 abstract: 'Look up the country of an IPv4 address'
 author:
   - 'Graciliano M. P. <gm@virtuasites.com.br>'
-build_requires:
-  ExtUtils::MakeMaker: 0
-configure_requires:
-  ExtUtils::MakeMaker: 0
+build_requires: {}
 dynamic_config: 1
 generated_by: 'ExtUtils::MakeMaker version 6.66, CPAN::Meta::Converter version 2.132830'
 license: perl
@@ -17,7 +14,6 @@ no_index:
   directory:
     - t
     - inc
-requires:
-  Memoize: 0
-  Test::More: 0.47
-version: 1.141670
+resources:
+  repository: https://github.com/bricas/geo-ipfree.git
+version: 1.143630

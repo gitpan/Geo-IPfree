@@ -19,24 +19,13 @@
          "inc"
       ]
    },
-   "prereqs" : {
-      "build" : {
-         "requires" : {
-            "ExtUtils::MakeMaker" : "0"
-         }
-      },
-      "configure" : {
-         "requires" : {
-            "ExtUtils::MakeMaker" : "0"
-         }
-      },
-      "runtime" : {
-         "requires" : {
-            "Memoize" : "0",
-            "Test::More" : "0.47"
-         }
+   "release_status" : "stable",
+   "resources" : {
+      "repository" : {
+         "type" : "git",
+         "url" : "https://github.com/bricas/geo-ipfree.git",
+         "web" : "https://github.com/bricas/geo-ipfree"
       }
    },
-   "release_status" : "stable",
-   "version" : "1.141670"
+   "version" : "1.143630"
 }
